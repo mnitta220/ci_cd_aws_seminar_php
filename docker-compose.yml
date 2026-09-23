@@ -1,0 +1,55 @@
+services:
+
+  db:
+    image: mysql:8.0
+    container_name: seminar-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: sampledb
+      MYSQL_USER: app
+      MYSQL_PASSWORD: apppassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  phpmyadmin:
+    image: phpmyadmin:5.2-apache
+    container_name: seminar-phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+    ports:
+      - "8080:80"
+
+  php:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.compose
+    container_name: seminar-php
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: sampledb
+      DB_USER: app
+      DB_PASS: apppassword
+    ports:
+      - "8081:80"
+    volumes:
+      - ./app:/var/www/html
+
+volumes:
+  mysql-data:

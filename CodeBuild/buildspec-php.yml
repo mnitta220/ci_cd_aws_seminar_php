@@ -13,7 +13,6 @@ env:
     RDS_ENDPOINT: "db-nitta-0922.crus22qum4dz.ap-northeast-1.rds.amazonaws.com"
 
 phases:
-
   pre_build:
     commands:
       - echo "Login to ECR..."
@@ -21,6 +20,49 @@ phases:
 
   build:
     commands:
+      - echo "Start Docker Compose services and run Playwright test..."
+      - |
+        set -e
+        PROJECT_DIR="$PWD"
+        trap 'docker compose -f "$PROJECT_DIR/docker-compose.yml" down --volumes' EXIT
+        docker compose up -d --build
+
+        mkdir -p /tmp/playwright-test
+        cd /tmp/playwright-test
+        npm init -y
+        npm install --no-save playwright@1.55.0
+        npx playwright install --with-deps chromium
+
+        node <<'EOF'
+        const { chromium } = require("playwright");
+
+        (async () => {
+          const browser = await chromium.launch({ headless: true });
+          try {
+            const page = await browser.newPage();
+            const response = await page.goto("http://127.0.0.1:8081/", {
+              waitUntil: "networkidle",
+            });
+
+            if (!response || response.status() !== 200) {
+              throw new Error(`Unexpected HTTP status: ${response?.status()}`);
+            }
+
+            await page.getByText("DB接続成功！").waitFor();
+            await page.getByText("継続的デプロイの成功！").waitFor();
+            await page.getByText("1: Taro Yamada").waitFor();
+            await page.getByText("2: Hanako Suzuki").waitFor();
+
+            console.log("Playwright test passed: app/index.php is displayed.");
+          } finally {
+            await browser.close();
+          }
+        })().catch((error) => {
+          console.error(error);
+          process.exitCode = 1;
+        });
+        EOF
+
       - echo Build Docker image for php...
       - docker build --build-arg ACCOUNT_ID=$ACCOUNT_ID --build-arg REGION=$AWS_DEFAULT_REGION --build-arg ECR_REPO_PHP_Apache=$ECR_REPO_PHP_Apache -t $ECR_REPO_PHP:latest ./app
       - docker tag $ECR_REPO_PHP:latest $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO_PHP:latest
@@ -72,4 +114,3 @@ artifacts:
   files:
     - taskdef-php.json
     - appspec.yml
-

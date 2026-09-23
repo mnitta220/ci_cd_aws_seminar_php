@@ -1,0 +1,13 @@
+{
+  "name": "ci-cd-aws-seminar-php",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "24.5.2",
+    "playwright": "1.55.0",
+    "tsx": "4.20.3",
+    "typescript": "5.9.2"
+  }
+}

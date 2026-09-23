@@ -63,9 +63,11 @@ services:
       - sh
       - -c
       - >-
-        cd /tmp && npm init -y >/dev/null 2>&1 &&
-        npm install --no-save playwright@1.55.0 >/dev/null 2>&1 &&
-        NODE_PATH=/tmp/node_modules node /tests/playwright-test.js
+        cd /tmp && cp /tests/playwright-test.ts /tmp/playwright-test.ts &&
+        npm init -y >/dev/null 2>&1 &&
+        npm install --no-save playwright@1.55.0 tsx@4.20.3 typescript@5.9.2 @types/node@24.5.2 >/dev/null 2>&1 &&
+        /tmp/node_modules/.bin/tsc --noEmit --module nodenext --moduleResolution nodenext --target ES2022 --skipLibCheck /tmp/playwright-test.ts &&
+        NODE_PATH=/tmp/node_modules /tmp/node_modules/.bin/tsx /tests/playwright-test.ts
 
 volumes:
   mysql-data:

@@ -47,7 +47,7 @@ phases:
         }
         trap cleanup EXIT
         echo "Starting Compose services..."
-        docker compose --project-directory "$PROJECT_DIR" up -d --build
+        docker compose --project-directory "$PROJECT_DIR" up -d --build db php phpmyadmin
 
         echo "Waiting for MySQL..."
         for attempt in $(seq 1 30); do

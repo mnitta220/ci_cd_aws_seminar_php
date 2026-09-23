@@ -59,8 +59,13 @@ services:
         condition: service_started
     volumes:
       - ./CodeBuild:/tests:ro
-    working_dir: /tests
-    command: ["node", "playwright-test.js"]
+    command:
+      - sh
+      - -c
+      - >-
+        cd /tmp && npm init -y >/dev/null 2>&1 &&
+        npm install --no-save playwright@1.55.0 >/dev/null 2>&1 &&
+        NODE_PATH=/tmp/node_modules node /tests/playwright-test.js
 
 volumes:
   mysql-data:

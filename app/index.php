@@ -9,6 +9,7 @@ try {
     // 出力結果
     echo "DB接続成功！<br>";
     //継続的デプロイを確認するための出力
+    echo "継続的デプロイの成功！<br>";
     
     // データ取得
     $stmt = $pdo->query("SELECT * FROM users");

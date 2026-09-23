@@ -1,0 +1,45 @@
+{
+  "applicationName": "cicd-aws-codedeploy-php-nitta-0922",
+  "deploymentGroupName": "cicd-aws-codedeploy-php-group",
+  "serviceRoleArn": "arn:aws:iam::321305250643:role/CodeDeployServiceRole-nitta-0922",
+  "deploymentStyle": {
+    "deploymentType": "BLUE_GREEN",
+    "deploymentOption": "WITH_TRAFFIC_CONTROL"
+  },
+  "blueGreenDeploymentConfiguration": {
+    "terminateBlueInstancesOnDeploymentSuccess": {
+      "action": "TERMINATE",
+      "terminationWaitTimeInMinutes": 1
+    },
+    "deploymentReadyOption": {
+      "actionOnTimeout": "CONTINUE_DEPLOYMENT",
+      "waitTimeInMinutes": 0
+    }
+  },  
+  "ecsServices": [
+    {
+      "clusterName": "ecs-cluster-nitta-0922",
+      "serviceName": "php-service-nitta-0922"
+    }
+  ],
+  "loadBalancerInfo": {
+    "targetGroupPairInfoList": [
+      {
+        "prodTrafficRoute": {
+          "listenerArns": [
+            "arn:aws:elasticloadbalancing:ap-northeast-1:321305250643:listener/app/alb-nitta-0922/856c14048daa00d0/c8b78e02419f8062"
+          ]
+        },
+        "testTrafficRoute": {
+          "listenerArns": [
+            "arn:aws:elasticloadbalancing:ap-northeast-1:321305250643:listener/app/alb-nitta-0922/856c14048daa00d0/914abffc97fae99f"
+          ]
+        },
+        "targetGroups": [
+          { "name": "php-blue-tg-nitta-0922" },
+          { "name": "php-green-tg-nitta-0922" }
+        ]
+      }
+    ]
+  }
+}

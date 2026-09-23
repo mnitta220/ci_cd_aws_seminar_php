@@ -1,0 +1,83 @@
+{
+  "pipeline": {
+    "name": "php-pipeline-bluegreen-nitta-0922",
+    "roleArn": "arn:aws:iam::321305250643:role/CodePipelineServiceRole-nitta-0922",
+    "artifactStore": {
+      "type": "S3",
+      "location": "cicd-nitta-0922"
+    },
+    "stages": [
+      {
+        "name": "Source",
+        "actions": [
+          {
+            "name": "Source",
+            "actionTypeId": {
+              "category": "Source",
+              "owner": "AWS",
+              "provider": "CodeStarSourceConnection",
+              "version": "1"
+            },
+            "configuration": {
+              "ConnectionArn": "arn:aws:codestar-connections:ap-northeast-1:321305250643:connection/683b62b3-c579-4a29-a637-7af99ce067d9",
+              "FullRepositoryId": "mnitta220/ci_cd_aws_seminar_php",
+              "BranchName": "main"
+            },
+            "outputArtifacts": [
+              { "name": "SourceOut" }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Build",
+        "actions": [
+          {
+            "name": "Build",
+            "actionTypeId": {
+              "category": "Build",
+              "owner": "AWS",
+              "provider": "CodeBuild",
+              "version": "1"
+            },
+            "configuration": {
+              "ProjectName": "php-build-nitta-0922"
+            },
+            "inputArtifacts": [
+              { "name": "SourceOut" }
+            ],
+            "outputArtifacts": [
+              { "name": "BuildOut" }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Deploy",
+        "actions": [
+          {
+            "name": "CodeDeployAction",
+            "actionTypeId": {
+              "category": "Deploy",
+              "owner": "AWS",
+              "provider": "CodeDeployToECS",
+              "version": "1"
+            },
+            "inputArtifacts": [
+              { "name": "BuildOut" }
+            ],
+            "configuration": {
+              "ApplicationName": "cicd-aws-codedeploy-php-nitta-0922",
+              "DeploymentGroupName": "cicd-aws-codedeploy-php-group",
+              "AppSpecTemplateArtifact": "BuildOut",
+              "AppSpecTemplatePath": "appspec.yml",
+              "TaskDefinitionTemplateArtifact": "BuildOut",
+              "TaskDefinitionTemplatePath": "taskdef-php.json"
+            }
+          }
+        ]
+      }
+    ],
+    "version": 1
+  }
+}

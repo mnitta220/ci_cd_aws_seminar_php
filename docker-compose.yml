@@ -63,7 +63,9 @@ services:
       - sh
       - -c
       - >-
-        set -eux; cd /tmp; cp /tests/playwright-test.ts /tmp/playwright-test.ts;
+        set -eux;
+        trap 'status=$$?; if [ "$$status" -ne 0 ]; then echo "[Playwright error report] Container command failed with exit code $$status"; fi; exit "$$status"' EXIT;
+        cd /tmp; cp /tests/playwright-test.ts /tmp/playwright-test.ts;
         echo '[Playwright container] Installing test dependencies';
         npm init -y;
         npm install --no-save playwright@1.55.0 tsx@4.20.3 typescript@5.9.2 @types/node@24.5.2;

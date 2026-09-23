@@ -81,12 +81,13 @@ const emitErrorReport = async (
 
 const runTest = async (): Promise<void> => {
   console.log(`[Playwright] Starting browser test against ${applicationUrl}`);
-  const browser = await chromium.launch({ headless: true });
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   let page: Page | undefined;
   const browserErrors: string[] = [];
   const failedRequests: string[] = [];
 
   try {
+    browser = await chromium.launch({ headless: true });
     page = await browser.newPage();
     page.on("console", (message) => {
       const entry = `[Browser console:${message.type()}] ${message.text()}`;
@@ -123,7 +124,7 @@ const runTest = async (): Promise<void> => {
     await emitErrorReport(page, error, browserErrors, failedRequests);
     throw error;
   } finally {
-    await browser.close();
+    await browser?.close();
   }
 };
 

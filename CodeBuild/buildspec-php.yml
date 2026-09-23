@@ -66,11 +66,17 @@ phases:
 
         echo "Run Playwright test inside the Compose network..."
         set +e
-        docker compose --project-directory "$PROJECT_DIR" run --rm --no-deps --no-log-prefix playwright
-        playwright_status=$?
+        PLAYWRIGHT_LOG="$PROJECT_DIR/playwright-codebuild.log"
+        rm -f "$PLAYWRIGHT_LOG"
+        docker compose --project-directory "$PROJECT_DIR" run --rm --no-deps --no-log-prefix playwright 2>&1 | tee "$PLAYWRIGHT_LOG"
+        playwright_status=${PIPESTATUS[0]}
         set -e
         if [ "$playwright_status" -ne 0 ]; then
-          echo "Playwright test failed with exit code $playwright_status. Review the [Playwright] and [Browser] logs above."
+          echo "[Playwright error report] docker compose run failed with exit code $playwright_status"
+          echo "[Playwright error report] Captured output:"
+          sed -n '1,400p' "$PLAYWRIGHT_LOG" || true
+          echo "[Playwright error report] Compose status:"
+          docker compose --project-directory "$PROJECT_DIR" ps -a || true
           exit "$playwright_status"
         fi
 

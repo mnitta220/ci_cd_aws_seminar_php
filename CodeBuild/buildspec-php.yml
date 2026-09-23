@@ -34,23 +34,43 @@ phases:
     commands:
       - echo "Start Docker Compose services and run Playwright test..."
       - |
-        set -e
+        set -euo pipefail
         PROJECT_DIR="$PWD"
         cleanup() {
           status=$?
           if [ "$status" -ne 0 ]; then
-            docker compose -f "$PROJECT_DIR/docker-compose.yml" ps || true
-            docker compose -f "$PROJECT_DIR/docker-compose.yml" logs --no-color || true
+            docker compose --project-directory "$PROJECT_DIR" ps || true
+            docker compose --project-directory "$PROJECT_DIR" logs --no-color || true
           fi
-          docker compose -f "$PROJECT_DIR/docker-compose.yml" down --volumes || true
+          docker compose --project-directory "$PROJECT_DIR" down --volumes || true
           exit "$status"
         }
         trap cleanup EXIT
-        docker compose up -d --build
+        echo "Starting Compose services..."
+        docker compose --project-directory "$PROJECT_DIR" up -d --build
 
-        docker compose exec -T db mysql -uroot -prootpassword sampledb < "$PROJECT_DIR/db/init/001-users.sql"
+        echo "Waiting for MySQL..."
+        for attempt in $(seq 1 30); do
+          if docker compose --project-directory "$PROJECT_DIR" exec -T db mysqladmin ping -uroot -prootpassword --silent; then
+            break
+          fi
+          if [ "$attempt" -eq 30 ]; then
+            echo "MySQL did not become ready."
+            exit 1
+          fi
+          sleep 2
+        done
 
+        echo "Initializing sampledb.users..."
+        docker compose --project-directory "$PROJECT_DIR" exec -T db mysql -uroot -prootpassword sampledb < "$PROJECT_DIR/db/init/001-users.sql"
+
+        echo "Checking PHP response..."
         curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-connrefused http://127.0.0.1:8081/ > /tmp/app-response.html
+        grep -F "DB接続成功！" /tmp/app-response.html
+        grep -F "継続的デプロイが成功！" /tmp/app-response.html
+        grep -F "1: Taro Yamada" /tmp/app-response.html
+        grep -F "2: Hanako Suzuki" /tmp/app-response.html
+        echo "PHP response check passed."
 
         mkdir -p /tmp/playwright-test
         cd /tmp/playwright-test

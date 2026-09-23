@@ -36,8 +36,21 @@ phases:
       - |
         set -e
         PROJECT_DIR="$PWD"
-        trap 'docker compose -f "$PROJECT_DIR/docker-compose.yml" down --volumes' EXIT
+        cleanup() {
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            docker compose -f "$PROJECT_DIR/docker-compose.yml" ps || true
+            docker compose -f "$PROJECT_DIR/docker-compose.yml" logs --no-color || true
+          fi
+          docker compose -f "$PROJECT_DIR/docker-compose.yml" down --volumes || true
+          exit "$status"
+        }
+        trap cleanup EXIT
         docker compose up -d --build
+
+        docker compose exec -T db mysql -uroot -prootpassword sampledb < "$PROJECT_DIR/db/init/001-users.sql"
+
+        curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-connrefused http://127.0.0.1:8081/ > /tmp/app-response.html
 
         mkdir -p /tmp/playwright-test
         cd /tmp/playwright-test
@@ -54,16 +67,17 @@ phases:
             const page = await browser.newPage();
             const response = await page.goto("http://127.0.0.1:8081/", {
               waitUntil: "networkidle",
+              timeout: 30000,
             });
 
             if (!response || response.status() !== 200) {
               throw new Error(`Unexpected HTTP status: ${response?.status()}`);
             }
 
-            await page.getByText("DB接続成功！").waitFor();
-            await page.getByText("継続的デプロイが成功！").waitFor();
-            await page.getByText("1: Taro Yamada").waitFor();
-            await page.getByText("2: Hanako Suzuki").waitFor();
+            await page.getByText("DB接続成功！").waitFor({ timeout: 10000 });
+            await page.getByText("継続的デプロイが成功！").waitFor({ timeout: 10000 });
+            await page.getByText("1: Taro Yamada").waitFor({ timeout: 10000 });
+            await page.getByText("2: Hanako Suzuki").waitFor({ timeout: 10000 });
 
             console.log("Playwright test passed: app/index.php is displayed.");
           } finally {

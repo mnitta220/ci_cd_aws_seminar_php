@@ -52,5 +52,15 @@ services:
     volumes:
       - ./app:/var/www/html
 
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.55.0-noble
+    depends_on:
+      php:
+        condition: service_started
+    volumes:
+      - ./CodeBuild:/tests:ro
+    working_dir: /tests
+    command: ["node", "playwright-test.js"]
+
 volumes:
   mysql-data:

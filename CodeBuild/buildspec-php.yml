@@ -64,50 +64,8 @@ phases:
         echo "Initializing sampledb.users..."
         docker compose --project-directory "$PROJECT_DIR" exec -T db mysql -uroot -prootpassword sampledb < "$PROJECT_DIR/db/init/001-users.sql"
 
-        echo "Checking PHP response..."
-        curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-connrefused http://127.0.0.1:8081/ > /tmp/app-response.html
-        grep -F "DB接続成功！" /tmp/app-response.html
-        grep -F "継続的デプロイが成功！" /tmp/app-response.html
-        grep -F "1: Taro Yamada" /tmp/app-response.html
-        grep -F "2: Hanako Suzuki" /tmp/app-response.html
-        echo "PHP response check passed."
-
-        mkdir -p /tmp/playwright-test
-        cd /tmp/playwright-test
-        npm init -y
-        npm install --no-save playwright@1.55.0
-        npx playwright install --with-deps chromium
-
-        node <<'EOF'
-        const { chromium } = require("playwright");
-
-        (async () => {
-          const browser = await chromium.launch({ headless: true });
-          try {
-            const page = await browser.newPage();
-            const response = await page.goto("http://127.0.0.1:8081/", {
-              waitUntil: "networkidle",
-              timeout: 30000,
-            });
-
-            if (!response || response.status() !== 200) {
-              throw new Error(`Unexpected HTTP status: ${response?.status()}`);
-            }
-
-            await page.getByText("DB接続成功！").waitFor({ timeout: 10000 });
-            await page.getByText("継続的デプロイが成功！").waitFor({ timeout: 10000 });
-            await page.getByText("1: Taro Yamada").waitFor({ timeout: 10000 });
-            await page.getByText("2: Hanako Suzuki").waitFor({ timeout: 10000 });
-
-            console.log("Playwright test passed: app/index.php is displayed.");
-          } finally {
-            await browser.close();
-          }
-        })().catch((error) => {
-          console.error(error);
-          process.exitCode = 1;
-        });
-        EOF
+        echo "Run Playwright test inside the Compose network..."
+        docker compose --project-directory "$PROJECT_DIR" run --rm --no-deps playwright
 
       - echo Build Docker image for php...
       - docker build --build-arg ACCOUNT_ID=$ACCOUNT_ID --build-arg REGION=$AWS_DEFAULT_REGION --build-arg ECR_REPO_PHP_Apache=$ECR_REPO_PHP_Apache -t $ECR_REPO_PHP:latest ./app

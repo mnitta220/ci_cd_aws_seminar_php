@@ -45,18 +45,65 @@ const formatError = (error: unknown): string => {
     : String(error);
 };
 
+const emitErrorReport = async (
+  page: Page | undefined,
+  error: unknown,
+  browserErrors: string[],
+  failedRequests: string[],
+): Promise<void> => {
+  let pageState: Record<string, unknown> = {
+    url: page?.url() ?? "unavailable",
+  };
+
+  if (page) {
+    try {
+      pageState = {
+        ...pageState,
+        title: await page.title(),
+        html: (await page.content()).slice(0, 4000),
+      };
+    } catch (diagnosticError: unknown) {
+      pageState.diagnosticError = formatError(diagnosticError);
+    }
+  }
+
+  const report = {
+    error: formatError(error),
+    stack: error instanceof Error ? error.stack : undefined,
+    page: pageState,
+    browserErrors,
+    failedRequests,
+  };
+
+  console.error("[Playwright error report]");
+  console.error(JSON.stringify(report, null, 2));
+};
+
 const runTest = async (): Promise<void> => {
   console.log(`[Playwright] Starting browser test against ${applicationUrl}`);
   const browser = await chromium.launch({ headless: true });
+  let page: Page | undefined;
+  const browserErrors: string[] = [];
+  const failedRequests: string[] = [];
+
   try {
-    const page = await browser.newPage();
+    page = await browser.newPage();
     page.on("console", (message) => {
-      console.log(`[Browser console:${message.type()}] ${message.text()}`);
+      const entry = `[Browser console:${message.type()}] ${message.text()}`;
+      console.log(entry);
+      if (message.type() === "error") {
+        browserErrors.push(entry);
+      }
+    });
+    page.on("pageerror", (error) => {
+      const entry = `[Browser page error] ${formatError(error)}`;
+      console.error(entry);
+      browserErrors.push(entry);
     });
     page.on("requestfailed", (request) => {
-      console.error(
-        `[Browser request failed] ${request.method()} ${request.url()} - ${request.failure()?.errorText ?? "unknown error"}`,
-      );
+      const entry = `[Browser request failed] ${request.method()} ${request.url()} - ${request.failure()?.errorText ?? "unknown error"}`;
+      console.error(entry);
+      failedRequests.push(entry);
     });
 
     const response = await waitForApplication(page);
@@ -72,15 +119,17 @@ const runTest = async (): Promise<void> => {
     await page.getByText("2: Hanako Suzuki").waitFor({ timeout: 10000 });
 
     console.log("Playwright test passed: app/index.php is displayed.");
+  } catch (error: unknown) {
+    await emitErrorReport(page, error, browserErrors, failedRequests);
+    throw error;
   } finally {
     await browser.close();
   }
 };
 
 runTest().catch((error: unknown) => {
-  console.error(`[Playwright] Test failed: ${formatError(error)}`);
-  if (error instanceof Error && error.stack) {
-    console.error(error.stack);
-  }
+  console.error(
+    `[Playwright] Test failed with exit code 1: ${formatError(error)}`,
+  );
   process.exitCode = 1;
 });

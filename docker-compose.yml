@@ -63,11 +63,14 @@ services:
       - sh
       - -c
       - >-
-        cd /tmp && cp /tests/playwright-test.ts /tmp/playwright-test.ts &&
-        npm init -y >/dev/null 2>&1 &&
-        npm install --no-save playwright@1.55.0 tsx@4.20.3 typescript@5.9.2 @types/node@24.5.2 >/dev/null 2>&1 &&
-        /tmp/node_modules/.bin/tsc --noEmit --module nodenext --moduleResolution nodenext --target ES2022 --skipLibCheck /tmp/playwright-test.ts &&
-        NODE_PATH=/tmp/node_modules /tmp/node_modules/.bin/tsx /tests/playwright-test.ts
+        set -eux; cd /tmp; cp /tests/playwright-test.ts /tmp/playwright-test.ts;
+        echo '[Playwright container] Installing test dependencies';
+        npm init -y;
+        npm install --no-save playwright@1.55.0 tsx@4.20.3 typescript@5.9.2 @types/node@24.5.2;
+        echo '[Playwright container] Running TypeScript type check';
+        /tmp/node_modules/.bin/tsc --noEmit --module nodenext --moduleResolution nodenext --target ES2022 --skipLibCheck /tmp/playwright-test.ts;
+        echo '[Playwright container] Running browser test';
+        DEBUG=pw:api NODE_PATH=/tmp/node_modules /tmp/node_modules/.bin/tsx /tests/playwright-test.ts
 
 volumes:
   mysql-data:

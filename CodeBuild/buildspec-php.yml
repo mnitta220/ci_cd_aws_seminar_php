@@ -65,7 +65,14 @@ phases:
         docker compose --project-directory "$PROJECT_DIR" exec -T db mysql -uroot -prootpassword sampledb < "$PROJECT_DIR/db/init/001-users.sql"
 
         echo "Run Playwright test inside the Compose network..."
-        docker compose --project-directory "$PROJECT_DIR" run --rm --no-deps playwright
+        set +e
+        docker compose --project-directory "$PROJECT_DIR" run --rm --no-deps --no-log-prefix playwright
+        playwright_status=$?
+        set -e
+        if [ "$playwright_status" -ne 0 ]; then
+          echo "Playwright test failed with exit code $playwright_status. Review the [Playwright] and [Browser] logs above."
+          exit "$playwright_status"
+        fi
 
       - echo Build Docker image for php...
       - docker build --build-arg ACCOUNT_ID=$ACCOUNT_ID --build-arg REGION=$AWS_DEFAULT_REGION --build-arg ECR_REPO_PHP_Apache=$ECR_REPO_PHP_Apache -t $ECR_REPO_PHP:latest ./app

@@ -34,7 +34,7 @@ phases:
     commands:
       - echo "Start Docker Compose services and run Playwright test..."
       - |
-        set -euo pipefail
+        set -eu
         PROJECT_DIR="$PWD"
         cleanup() {
           status=$?

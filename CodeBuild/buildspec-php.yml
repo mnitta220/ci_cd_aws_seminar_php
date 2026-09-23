@@ -68,8 +68,9 @@ phases:
         set +e
         PLAYWRIGHT_LOG="$PROJECT_DIR/playwright-codebuild.log"
         rm -f "$PLAYWRIGHT_LOG"
-        docker compose --project-directory "$PROJECT_DIR" run --rm --no-deps --no-log-prefix playwright 2>&1 | tee "$PLAYWRIGHT_LOG"
-        playwright_status=${PIPESTATUS[0]}
+        docker compose --project-directory "$PROJECT_DIR" run --rm --no-deps playwright > "$PLAYWRIGHT_LOG" 2>&1
+        playwright_status=$?
+        cat "$PLAYWRIGHT_LOG"
         set -e
         if [ "$playwright_status" -ne 0 ]; then
           echo "[Playwright error report] docker compose run failed with exit code $playwright_status"

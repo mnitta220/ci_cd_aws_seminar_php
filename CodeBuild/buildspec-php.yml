@@ -13,6 +13,18 @@ env:
     RDS_ENDPOINT: "db-nitta-0922.crus22qum4dz.ap-northeast-1.rds.amazonaws.com"
 
 phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo "Install Docker Compose plugin..."
+      - |
+        set -e
+        mkdir -p /usr/local/lib/docker/cli-plugins
+        curl -fsSL "https://github.com/docker/compose/releases/download/v2.40.3/docker-compose-linux-$(uname -m)" -o /usr/local/lib/docker/cli-plugins/docker-compose
+        chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+        docker compose version
+
   pre_build:
     commands:
       - echo "Login to ECR..."
@@ -69,6 +81,11 @@ phases:
 
   post_build:
     commands:
+      - |
+        if [ "${CODEBUILD_BUILD_SUCCEEDING:-0}" != "1" ]; then
+          echo "Build or Playwright test failed; skip ECR push and deployment artifacts."
+          exit 1
+        fi
       - echo "Push Docker image to ECR..."
       - docker push $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO_PHP:latest
 

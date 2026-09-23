@@ -49,7 +49,7 @@ phases:
             }
 
             await page.getByText("DB接続成功！").waitFor();
-            await page.getByText("継続的デプロイの成功！").waitFor();
+            await page.getByText("継続的デプロイが成功！").waitFor();
             await page.getByText("1: Taro Yamada").waitFor();
             await page.getByText("2: Hanako Suzuki").waitFor();
 
